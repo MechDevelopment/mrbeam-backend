@@ -19,15 +19,16 @@ struct UploadForm {
     file: actix_multipart::form::bytes::Bytes,
 }
 
-async fn predict(MultipartForm(form): MultipartForm<UploadForm>) -> Result<impl Responder, Error> {
+async fn predict(
+    MultipartForm(form): MultipartForm<UploadForm>,
+    client: web::Data<Client>,
+) -> Result<impl Responder, Error> {
     let bytes = form.file.data.as_bytes().to_vec();
 
     let beam_file = multipart::Part::bytes(bytes)
         .file_name("beam.png")
         .mime_str("image/png")
         .unwrap();
-
-    let client = Client::new();
 
     let form = multipart::Form::new().part("file", beam_file);
 
@@ -39,14 +40,19 @@ async fn predict(MultipartForm(form): MultipartForm<UploadForm>) -> Result<impl 
         .unwrap();
 
     let beams: Vec<Beam> = res.json().await.unwrap();
-
     Ok(HttpResponse::Ok().json(beams))
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().route("/", web::post().to(predict)))
-        .bind("127.0.0.1:8001")?
-        .run()
-        .await
+    let client = web::Data::new(Client::new());
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(client.clone())
+            .route("/predict", web::post().to(predict))
+    })
+    .bind("127.0.0.1:8001")?
+    .run()
+    .await
 }
