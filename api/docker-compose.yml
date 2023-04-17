@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  database:
+    image: bitnami/postgresql:13.3.0
+    restart: always
+    container_name: database
+    env_file: ".env"
+    user: root
+    volumes:
+      - ./db_docker:/bitnami/postgresql
+    expose:
+      - 5432
+    environment:
+      - POSTGRES_USERNAME=${DATABASE_USER}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DATABASE=${DATABASE_NAME}
+      - POSTGRES_HOST_AUTH_METHOD= "trust"
+      - POSTGRESQL_POSTGRES_PASSWORD= ${DATABASE_PASSWORD}
+      
   minio:
     image: minio/minio:latest
     container_name: minio
