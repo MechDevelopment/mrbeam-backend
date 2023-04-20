@@ -31,6 +31,8 @@ async fn predict(
 ) -> Result<impl Responder, Error> {
     let bytes = form.file.data.as_bytes().to_vec();
 
+    let hash = sha256::digest_bytes(&bytes);
+
     let beam_file = multipart::Part::bytes(bytes)
         .file_name("beam.png")
         .mime_str("image/png")
