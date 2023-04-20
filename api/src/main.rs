@@ -14,6 +14,12 @@ struct Beam {
     name: String,
 }
 
+#[derive(serde::Serialize)]
+struct PredictionInfo {
+    data: Vec<Beam>,
+    uuid: String
+}
+
 #[derive(Debug, MultipartForm)]
 struct UploadForm {
     file: actix_multipart::form::bytes::Bytes,
@@ -29,7 +35,7 @@ async fn predict(
         .file_name("beam.png")
         .mime_str("image/png")
         .unwrap();
-
+    
     let form = multipart::Form::new().part("file", beam_file);
 
     let res = client
@@ -40,7 +46,13 @@ async fn predict(
         .unwrap();
 
     let beams: Vec<Beam> = res.json().await.unwrap();
-    Ok(HttpResponse::Ok().json(beams))
+
+    Ok(HttpResponse::Ok().json(
+        PredictionInfo {
+            data: beams,
+            uuid: String::from("ue12-aks8-ca82- 892l"),
+        }
+    ))
 }
 
 #[tokio::main]
