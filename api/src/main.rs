@@ -25,6 +25,10 @@ struct UploadForm {
     file: actix_multipart::form::bytes::Bytes,
 }
 
+async fn health() -> impl Responder {
+    HttpResponse::Ok()
+}
+
 async fn predict(
     MultipartForm(form): MultipartForm<UploadForm>,
     client: web::Data<Client>,
@@ -46,7 +50,7 @@ async fn predict(
         .send()
         .await
         .unwrap();
-
+    
     let beams: Vec<Beam> = res.json().await.unwrap();
 
     Ok(HttpResponse::Ok().json(
@@ -64,6 +68,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(client.clone())
+            .route("/health", web::get().to(health))
             .route("/predict", web::post().to(predict))
     })
     .bind("127.0.0.1:8001")?
