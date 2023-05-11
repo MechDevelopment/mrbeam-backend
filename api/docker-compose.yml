@@ -11,11 +11,12 @@ services:
       - ./db_docker:/bitnami/postgresql
     expose:
       - 5432
+    ports:
+      - "${DATABASE_PORT}:5432"
     environment:
       - POSTGRES_USERNAME=${DATABASE_USER}
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
       - POSTGRES_DATABASE=${DATABASE_NAME}
-      - POSTGRES_HOST_AUTH_METHOD= "trust"
       - POSTGRESQL_POSTGRES_PASSWORD= ${DATABASE_PASSWORD}
       
   minio:
