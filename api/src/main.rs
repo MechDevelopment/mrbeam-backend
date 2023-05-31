@@ -32,9 +32,9 @@ pub struct PredictionModel {
     // pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-pub struct CorrectionModel {
+#[derive(Debug, sqlx::FromRow, serde::Deserialize, serde::Serialize)]
+pub struct PredictionIdModel {
     pub id: uuid::Uuid,
-    pub correction: sqlx::types::Json<Vec<Beam>>
 }
 
 #[derive(Debug, MultipartForm)]
@@ -74,9 +74,9 @@ async fn correct(
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
     let id = uuid::Uuid::from_str(&id.into_inner()).unwrap();
-    let query_result: Result<PredictionModel, sqlx::Error> = sqlx::query_as!(
-        PredictionModel,
-        "SELECT id, prediction FROM predictions WHERE id = $1",
+    let query_result = sqlx::query_as!(
+        PredictionIdModel,
+        "SELECT id FROM predictions WHERE id = $1",
         id
     )
     .fetch_one(&data.db)
@@ -86,15 +86,12 @@ async fn correct(
         return Ok(HttpResponse::NotFound());
     }
 
-    dbg!(query_result.unwrap());
-
-    let query_result: (uuid::Uuid,) =
-        sqlx::query_as("UPDATE predictions SET correction = $1 WHERE id = $2 RETURNING id")
-            .bind(sqlx::types::Json(&body.data))
-            .bind(id)
+    let query_result =
+        sqlx::query_as!(PredictionIdModel, "UPDATE predictions SET correction = $1 WHERE id = $2 RETURNING id", serde_json::json!(&body.data), id)
             .fetch_one(&data.db)
             .await
             .unwrap();
+
         
     Ok(HttpResponse::Ok())
 }
