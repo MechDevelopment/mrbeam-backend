@@ -1,9 +1,9 @@
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Beam {
-    xmin: f32,
-    ymin: f32,
-    xmax: f32,
-    ymax: f32,
-    confidence: f32,
-    name: String,
+    pub xmin: f32,
+    pub ymin: f32,
+    pub xmax: f32,
+    pub ymax: f32,
+    pub confidence: Option<f32>,
+    pub name: String,
 }
