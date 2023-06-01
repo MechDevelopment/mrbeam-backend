@@ -9,34 +9,15 @@ use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::env;
 use std::str::FromStr;
 
-use api::models::Beam;
+use awsregion::Region;
+use s3::bucket::{Bucket, self};
+
+use api::models::{Beam, PredictionId, PredictionUpload};
 use api::services::MLService;
 
 pub struct AppState {
     db: Pool<Postgres>,
 }
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct PredictionInfo {
-    data: Vec<Beam>,
-    uuid: String,
-}
-#[derive(Debug, sqlx::FromRow, serde::Deserialize, serde::Serialize)]
-#[allow(non_snake_case)]
-pub struct PredictionModel {
-    pub id: uuid::Uuid,
-    pub prediction: Option<serde_json::Value>,
-    // pub correction: serde_json::Value,
-    // pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-    // #[serde(rename = "updatedAt")]
-    // pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
-}
-
-#[derive(Debug, sqlx::FromRow, serde::Deserialize, serde::Serialize)]
-pub struct PredictionIdModel {
-    pub id: uuid::Uuid,
-}
-
 #[derive(Debug, MultipartForm)]
 struct UploadForm {
     file: actix_multipart::form::bytes::Bytes,
@@ -62,7 +43,7 @@ async fn predict(
             .await
             .expect("Unable to create.");
 
-    Ok(HttpResponse::Ok().json(PredictionInfo {
+    Ok(HttpResponse::Ok().json(PredictionUpload {
         data: beams,
         uuid: row.0.to_string(),
     }))
@@ -70,12 +51,12 @@ async fn predict(
 
 async fn correct(
     id: web::Path<String>,
-    body: web::Json<PredictionInfo>,
+    body: web::Json<PredictionUpload>,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
     let id = uuid::Uuid::from_str(&id.into_inner()).unwrap();
     let query_result = sqlx::query_as!(
-        PredictionIdModel,
+        PredictionId,
         "SELECT id FROM predictions WHERE id = $1",
         id
     )
@@ -86,13 +67,16 @@ async fn correct(
         return Ok(HttpResponse::NotFound());
     }
 
-    let query_result =
-        sqlx::query_as!(PredictionIdModel, "UPDATE predictions SET correction = $1 WHERE id = $2 RETURNING id", serde_json::json!(&body.data), id)
-            .fetch_one(&data.db)
-            .await
-            .unwrap();
+    let query_result = sqlx::query_as!(
+        PredictionId,
+        "UPDATE predictions SET correction = $1 WHERE id = $2 RETURNING id",
+        serde_json::json!(&body.data),
+        id
+    )
+    .fetch_one(&data.db)
+    .await
+    .unwrap();
 
-        
     Ok(HttpResponse::Ok())
 }
 
