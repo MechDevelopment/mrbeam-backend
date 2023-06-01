@@ -1,0 +1,14 @@
+numpy
+requests
+uvicorn
+fastapi
+Pillow
+python-multipart
+opencv-python-headless
+pandas
+tqdm
+psutil
+PyYAML
+matplotlib
+seaborn
+scikit-learn
