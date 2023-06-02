@@ -1,17 +1,11 @@
 use actix_multipart::form::MultipartForm;
 use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder};
-use chrono::Utc;
 use dotenvy::dotenv;
 use image::EncodableLayout;
-use sqlx::types::Uuid;
 use sqlx::PgPool;
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 use std::env;
 use std::str::FromStr;
-
-use awsregion::Region;
-use s3::bucket::{self, Bucket};
-use s3::creds::Credentials;
 
 use api::models::{PredictionId, PredictionUpload};
 use api::services::{ImageStorage, MLService};
@@ -36,9 +30,9 @@ async fn predict(
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
     let bytes = form.file.data.as_bytes().to_vec();
-    
+
     let hash = sha256::digest_bytes(&bytes);
-    
+
     let beams = ml_client.predict(bytes.clone()).await.unwrap();
 
     let row: (uuid::Uuid,) =
