@@ -36,7 +36,9 @@ async fn predict(
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
     let bytes = form.file.data.as_bytes().to_vec();
-
+    
+    let hash = sha256::digest_bytes(&bytes);
+    
     let beams = ml_client.predict(bytes.clone()).await.unwrap();
 
     let row: (uuid::Uuid,) =
@@ -46,7 +48,7 @@ async fn predict(
             .await
             .expect("Unable to create.");
 
-    let filename = "test.jpg".to_string();
+    let filename = format!("{}.jpg", hash);
     let _filename = filename.clone();
 
     // TODO (vpvpvpvp): Add gracefull shutdown!

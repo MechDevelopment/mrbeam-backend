@@ -79,7 +79,7 @@ impl ImageStorage {
         image: Vec<u8>,
         filename: String,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let res = self.s3_bucket.head_object("test.jpg").await;
+        let res = self.s3_bucket.head_object(filename.to_owned()).await;
 
         match res {
             Err(s3::error::S3Error::Http(404, _)) => {
