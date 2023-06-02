@@ -11,8 +11,9 @@ use std::str::FromStr;
 
 use awsregion::Region;
 use s3::bucket::{Bucket, self};
+use s3::creds::Credentials;
 
-use api::models::{Beam, PredictionId, PredictionUpload};
+use api::models::{PredictionId, PredictionUpload};
 use api::services::MLService;
 
 pub struct AppState {
@@ -21,6 +22,7 @@ pub struct AppState {
 #[derive(Debug, MultipartForm)]
 struct UploadForm {
     file: actix_multipart::form::bytes::Bytes,
+    save: Option<actix_multipart::form::text::Text<String>>
 }
 
 async fn health() -> impl Responder {
@@ -42,6 +44,9 @@ async fn predict(
             .fetch_one(&data.db)
             .await
             .expect("Unable to create.");
+
+    // TODO (vpvpvpvp): Add gracefull shutdown!
+    // tokio::task::spawn(api::services::upload_image(bytes));
 
     Ok(HttpResponse::Ok().json(PredictionUpload {
         data: beams,
