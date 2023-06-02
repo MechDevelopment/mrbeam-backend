@@ -42,7 +42,15 @@ async fn predict(
             .await
             .expect("Unable to create.");
 
-    let filename = format!("{}.jpg", hash);
+    let filename = format!(
+        "{}.{}",
+        hash,
+        std::path::Path::new(&form.file.file_name.unwrap())
+            .extension()
+            .and_then(std::ffi::OsStr::to_str)
+            .unwrap()
+            .to_owned()
+    );
     let _filename = filename.clone();
 
     // TODO (vpvpvpvp): Add gracefull shutdown!
