@@ -98,14 +98,14 @@ async fn main() -> std::io::Result<()> {
     dotenv().expect(".env file not found");
 
     let image_storage = web::Data::new(ImageStorage::new(
-        "mrbeam".to_string(),
-        "http://127.0.0.1:9000".to_string(),
-        "EARfO36y2uaGLW3H".to_string(),
-        "CKPmTIbMQHHRInAaq8F8L6YXY22x3Idm".to_string(),
+        env::var("MINIO_BUCKET").unwrap().to_string(),
+        env::var("MINIO_URL").unwrap().to_string(),
+        env::var("MINIO_ACCESS_KEY").unwrap().to_string(),
+        env::var("MINIO_SECRET_KEY").unwrap().to_string(),
     ));
 
     let ml_client = web::Data::new(MLService::new(String::from(
-        env::var("ML_SERVICE").unwrap_or("http://127.0.0.1:8000".to_string()),
+        env::var("ML_SERVICE_URL").unwrap(),
     )));
     let db_url = env::var("DATABASE_URL").expect("Database is unavailable.");
     let db_pool = PgPool::connect(&db_url)
