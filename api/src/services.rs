@@ -1,3 +1,9 @@
+use std::io::Error;
+
+use awsregion::Region;
+use s3::bucket::Bucket;
+use s3::creds::Credentials;
+
 use crate::models::Beam;
 
 pub struct MLService {
@@ -24,7 +30,8 @@ impl MLService {
 
         let form = reqwest::multipart::Form::new().part("file", beam_image);
 
-        let res = self.http_client
+        let res = self
+            .http_client
             .post(&predict_url)
             .multipart(form)
             .send()
@@ -33,5 +40,61 @@ impl MLService {
 
         let beams: Vec<Beam> = res.json().await.unwrap();
         Ok(beams)
+    }
+}
+
+pub struct ImageStorage {
+    s3_bucket: Bucket,
+}
+
+impl ImageStorage {
+    pub fn new(
+        bucket_name: String,
+        endpoint: String,
+        access_key: String,
+        secret_key: String,
+    ) -> Self {
+        let s3_bucket = Bucket::new(
+            &bucket_name,
+            Region::Custom {
+                region: "".to_owned(),
+                endpoint: endpoint.to_owned(),
+            },
+            Credentials {
+                access_key: Some(access_key.to_owned()),
+                secret_key: Some(secret_key.to_owned()),
+                security_token: None,
+                session_token: None,
+                expiration: None,
+            },
+        )
+        .unwrap()
+        .with_path_style();
+
+        Self { s3_bucket }
+    }
+
+    pub async fn upload_image(
+        &self,
+        image: Vec<u8>,
+        filename: String,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let res = self.s3_bucket.head_object("test.jpg").await;
+
+        match res {
+            Err(s3::error::S3Error::Http(404, _)) => {
+                self.s3_bucket
+                    .put_object(filename.to_owned(), &image)
+                    .await
+                    .unwrap();
+                return Ok(filename);
+            }
+            Err(_) => todo!(),
+            Ok(_) => {
+                println!("Already exists!");
+                return Ok(filename);
+            }
+        };
+        //     actix_web::rt::time::sleep(std::time::Duration::from_secs(2)).await;
     }
 }
