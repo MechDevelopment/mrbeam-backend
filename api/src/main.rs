@@ -1,13 +1,15 @@
 use actix_multipart::form::MultipartForm;
+use actix_web::middleware::Logger;
 use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder};
 use dotenvy::dotenv;
 use image::EncodableLayout;
-use sqlx::PgPool;
-use sqlx::{Pool, Postgres};
+use sqlx::postgres::PgConnectOptions;
+use sqlx::{ConnectOptions, Pool, Postgres, PgPool};
 use std::env;
 use std::str::FromStr;
 
 use tracing::{info, Level};
+use tracing_actix_web::TracingLogger;
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
 use api::models::{PredictionId, PredictionUpload};
@@ -98,17 +100,17 @@ async fn correct(
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let filter = Targets::from_str(std::env::var("RUST_LOG").as_deref().unwrap_or("info"))
-    .expect("RUST_LOG should be a valid tracing filter");
-    tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
-        .json()
-        .finish()
-        .with(filter)
-        .init();
-
+    // let filter = Targets::from_str(std::env::var("RUST_LOG").as_deref().unwrap_or("info"))
+    // .expect("RUST_LOG should be a valid tracing filter");
+    // tracing_subscriber::fmt()
+    //     .with_max_level(Level::TRACE)
+    //     .json()
+    //     .finish()
+    //     .with(filter)
+    //     .init();
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     dotenv().expect(".env file not found");
-    
+
     let image_storage = web::Data::new(ImageStorage::new(
         env::var("MINIO_BUCKET").unwrap().to_string(),
         env::var("MINIO_URL").unwrap().to_string(),
@@ -120,7 +122,13 @@ async fn main() -> std::io::Result<()> {
         env::var("ML_SERVICE_URL").unwrap(),
     )));
     let db_url = env::var("DATABASE_URL").expect("Database is unavailable.");
-    let db_pool = PgPool::connect(&db_url)
+
+    let options = PgConnectOptions::from_str(&db_url)
+        .unwrap()
+        .disable_statement_logging()
+        .clone();
+
+    let db_pool = PgPool::connect_with(options)
         .await
         .expect("Failed to connect to the database.");
 
@@ -131,6 +139,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(AppState {
                 db: db_pool.clone(),
             }))
+            .wrap(TracingLogger::default())
             .route("/health", web::get().to(health))
             .route("/predict", web::post().to(predict))
             .route("/correct/{id}", web::post().to(correct))
