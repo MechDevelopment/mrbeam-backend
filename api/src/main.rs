@@ -1,16 +1,18 @@
 use actix_multipart::form::MultipartForm;
-use actix_web::middleware::Logger;
 use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder};
 use dotenvy::dotenv;
 use image::EncodableLayout;
 use sqlx::postgres::PgConnectOptions;
-use sqlx::{ConnectOptions, Pool, Postgres, PgPool};
+use sqlx::{ConnectOptions, PgPool, Pool, Postgres};
 use std::env;
 use std::str::FromStr;
 
-use tracing::{info, Level};
+use tracing::subscriber::set_global_default;
 use tracing_actix_web::TracingLogger;
-use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{
+    filter::Targets, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
+};
 
 use api::models::{PredictionId, PredictionUpload};
 use api::services::{ImageStorage, MLService};
@@ -38,8 +40,8 @@ async fn predict(
 
     let hash = sha256::digest_bytes(&bytes);
 
+    tracing::info!("Predicting for image {}!", hash);
     let beams = ml_client.predict(bytes.clone()).await.unwrap();
-
     let row: (uuid::Uuid,) =
         sqlx::query_as("INSERT INTO predictions (prediction) VALUES ($1) RETURNING id")
             .bind(sqlx::types::Json(&beams))
@@ -100,15 +102,17 @@ async fn correct(
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    // let filter = Targets::from_str(std::env::var("RUST_LOG").as_deref().unwrap_or("info"))
-    // .expect("RUST_LOG should be a valid tracing filter");
-    // tracing_subscriber::fmt()
-    //     .with_max_level(Level::TRACE)
-    //     .json()
-    //     .finish()
-    //     .with(filter)
-    //     .init();
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let skipped_fields = vec!["line", "file", "target"];
+    let formatting_layer = BunyanFormattingLayer::new("mrbeam-api".into(), std::io::stdout)
+        .skip_fields(skipped_fields.into_iter())
+        .expect("One of the specified fields cannot be skipped");
+    let subscriber = Registry::default()
+        .with(env_filter)
+        .with(JsonStorageLayer)
+        .with(formatting_layer);
+    set_global_default(subscriber).expect("Failed to set subscriber");
     dotenv().expect(".env file not found");
 
     let image_storage = web::Data::new(ImageStorage::new(
