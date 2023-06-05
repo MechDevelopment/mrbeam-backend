@@ -91,7 +91,6 @@ impl ImageStorage {
             }
             Err(_) => todo!(),
             Ok(_) => {
-                println!("Already exists!");
                 return Ok(filename);
             }
         };

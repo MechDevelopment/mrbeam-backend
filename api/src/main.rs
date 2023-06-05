@@ -7,6 +7,9 @@ use sqlx::{Pool, Postgres};
 use std::env;
 use std::str::FromStr;
 
+use tracing::{info, Level};
+use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
+
 use api::models::{PredictionId, PredictionUpload};
 use api::services::{ImageStorage, MLService};
 
@@ -95,8 +98,17 @@ async fn correct(
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().expect(".env file not found");
+    let filter = Targets::from_str(std::env::var("RUST_LOG").as_deref().unwrap_or("info"))
+    .expect("RUST_LOG should be a valid tracing filter");
+    tracing_subscriber::fmt()
+        .with_max_level(Level::TRACE)
+        .json()
+        .finish()
+        .with(filter)
+        .init();
 
+    dotenv().expect(".env file not found");
+    
     let image_storage = web::Data::new(ImageStorage::new(
         env::var("MINIO_BUCKET").unwrap().to_string(),
         env::var("MINIO_URL").unwrap().to_string(),
