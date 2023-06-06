@@ -30,6 +30,10 @@ async fn health() -> impl Responder {
     HttpResponse::Ok()
 }
 
+#[tracing::instrument(
+    name = "Adding a new prediction",
+    skip(form, image_storage, ml_client, data)
+)]
 async fn predict(
     MultipartForm(form): MultipartForm<UploadForm>,
     image_storage: web::Data<ImageStorage>,
@@ -40,7 +44,7 @@ async fn predict(
 
     let hash = sha256::digest_bytes(&bytes);
 
-    tracing::info!("Predicting for image {}!", hash);
+    // tracing::info!("Predicting for image {}!", hash);
     let beams = ml_client.predict(bytes.clone()).await.unwrap();
     let row: (uuid::Uuid,) =
         sqlx::query_as("INSERT INTO predictions (prediction) VALUES ($1) RETURNING id")
@@ -102,6 +106,18 @@ async fn correct(
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().expect(".env file not found");
+
+    let _guard = sentry::init((
+        env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set."),
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            traces_sample_rate: 1.0,
+            enable_profiling: true,
+            profiles_sample_rate: 1.0,
+            ..Default::default()
+        },
+    ));
 
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let skipped_fields = vec!["line", "file", "target"];
@@ -110,10 +126,10 @@ async fn main() -> std::io::Result<()> {
         .expect("One of the specified fields cannot be skipped");
     let subscriber = Registry::default()
         .with(env_filter)
+        .with(sentry_tracing::layer())
         .with(JsonStorageLayer)
         .with(formatting_layer);
     set_global_default(subscriber).expect("Failed to set subscriber");
-    dotenv().expect(".env file not found");
 
     let image_storage = web::Data::new(ImageStorage::new(
         env::var("MINIO_BUCKET").unwrap().to_string(),
@@ -144,6 +160,7 @@ async fn main() -> std::io::Result<()> {
                 db: db_pool.clone(),
             }))
             .wrap(TracingLogger::default())
+            // .wrap(sentry_actix::Sentry::new())
             .route("/health", web::get().to(health))
             .route("/predict", web::post().to(predict))
             .route("/correct/{id}", web::post().to(correct))
