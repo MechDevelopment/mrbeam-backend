@@ -142,22 +142,11 @@ async fn main() -> std::io::Result<()> {
     let ml_client = web::Data::new(MLService::new(String::from(
         env::var("ML_SERVICE_URL").unwrap(),
     )));
-
+    
     let options = PgConnectOptions::new()
-        .host(&env::var("DATABASE_HOST").expect("$DATABASE_HOST must be set."))
-        .port(
-            env::var("DATABASE_PORT")
-                .expect("$DATABASE_PORT must be set.")
-                .parse()
-                .unwrap(),
-        )
-        .database(&env::var("DATABASE_NAME").expect("$DATABASE_NAME must be set."))
-        .username(&env::var("DATABASE_USER").expect("$DATABASE_USER must be set."))
-        .password(&env::var("DATABASE_PASSWORD").expect("$DATABASE_PASSWORD must be set."))
         .disable_statement_logging()
         .clone();
 
-    dbg!(options.clone());
     let db_pool = PgPool::connect_with(options)
         .await
         .expect("Failed to connect to the database.");
