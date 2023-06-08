@@ -142,10 +142,8 @@ async fn main() -> std::io::Result<()> {
     let ml_client = web::Data::new(MLService::new(String::from(
         env::var("ML_SERVICE_URL").unwrap(),
     )));
-    
-    let options = PgConnectOptions::new()
-        .disable_statement_logging()
-        .clone();
+
+    let options = PgConnectOptions::new().disable_statement_logging().clone();
 
     let db_pool = PgPool::connect_with(options)
         .await
@@ -159,9 +157,12 @@ async fn main() -> std::io::Result<()> {
                 db: db_pool.clone(),
             }))
             .wrap(TracingLogger::default())
-            .route("/health", web::get().to(health))
-            .route("/predict", web::post().to(predict))
-            .route("/correct/{id}", web::post().to(correct))
+            .service(
+                web::scope("/api/v1")
+                    .route("/health", web::get().to(health))
+                    .route("/predict", web::post().to(predict))
+                    .route("/correct/{id}", web::post().to(correct)),
+            )
     })
     .bind("127.0.0.1:8001")?
     .run()
