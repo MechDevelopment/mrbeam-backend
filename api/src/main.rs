@@ -76,6 +76,7 @@ async fn predict(
     }))
 }
 
+#[tracing::instrument(name = "Correct prediction", skip(body, data))]
 async fn correct(
     id: web::Path<String>,
     body: web::Json<PredictionUpload>,
@@ -129,7 +130,7 @@ async fn main() -> std::io::Result<()> {
         .with(sentry_tracing::layer())
         .with(JsonStorageLayer)
         .with(formatting_layer);
-    set_global_default(subscriber).expect("Failed to set subscriber");
+    set_global_default(subscriber).expect("Failed to set subscriber.");
 
     let image_storage = web::Data::new(ImageStorage::new(
         env::var("MINIO_BUCKET").unwrap().to_string(),
@@ -141,13 +142,22 @@ async fn main() -> std::io::Result<()> {
     let ml_client = web::Data::new(MLService::new(String::from(
         env::var("ML_SERVICE_URL").unwrap(),
     )));
-    let db_url = env::var("DATABASE_URL").expect("Database is unavailable.");
 
-    let options = PgConnectOptions::from_str(&db_url)
-        .unwrap()
+    let options = PgConnectOptions::new()
+        .host(&env::var("DATABASE_HOST").expect("$DATABASE_HOST must be set."))
+        .port(
+            env::var("DATABASE_PORT")
+                .expect("$DATABASE_PORT must be set.")
+                .parse()
+                .unwrap(),
+        )
+        .database(&env::var("DATABASE_NAME").expect("$DATABASE_NAME must be set."))
+        .username(&env::var("DATABASE_USER").expect("$DATABASE_USER must be set."))
+        .password(&env::var("DATABASE_PASSWORD").expect("$DATABASE_PASSWORD must be set."))
         .disable_statement_logging()
         .clone();
 
+    dbg!(options.clone());
     let db_pool = PgPool::connect_with(options)
         .await
         .expect("Failed to connect to the database.");
@@ -160,7 +170,6 @@ async fn main() -> std::io::Result<()> {
                 db: db_pool.clone(),
             }))
             .wrap(TracingLogger::default())
-            // .wrap(sentry_actix::Sentry::new())
             .route("/health", web::get().to(health))
             .route("/predict", web::post().to(predict))
             .route("/correct/{id}", web::post().to(correct))
