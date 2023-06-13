@@ -67,3 +67,14 @@ class YOLOPostProcessHandler(BaseTaskHandler):
     def handle(self, *tasks: Task):
         for task in tasks:
             task.pred = self._model.process(task.pred, task.orig_shape, task.preprocessed_shape, task.padded_shape, task.shifts)
+
+
+def get_flow() -> Flow:
+    return Flow(
+        FlowStep(ImageLoaderHandler(), nprocs=1),
+        FlowStep(YOLOPreProcessHandler(), nprocs=1),
+        FlowStep(ModelHandler(), batch_size=1, nprocs=1),
+        FlowStep(YOLOPostProcessHandler(), nprocs=1),
+        metrics_enabled=False,
+        # mp_start_method='spawn',
+    )
