@@ -1,4 +1,5 @@
 import abc
+import dataclasses
 from typing import Tuple, List
 import torch
 import numpy as np
@@ -100,3 +101,29 @@ class YOLOPostProcess:
         pred[:, :4] = scale_coords(pred_shape, pred[:, :4], original_shape).round()
 
         return pred
+
+
+@dataclasses.dataclass
+class ModelInfo:
+    name: str
+    config_path: str
+    weights_path: str
+    device: str
+    image_size: int
+
+
+class ModelProducer:
+    def __init__(self, model_info: ModelInfo):
+        self._model_info = model_info
+
+    def get_pre_proc(self) -> YOLOPreProcess:
+        return YOLOPreProcess(self._model_info.image_size)
+
+    def get_model(self) -> YOLOV5Model:
+        return YOLOV5Model(
+            self._model_info.weights_path,
+            self._model_info.device
+        )
+
+    def get_post_proc(self) -> YOLOPostProcess:
+        return YOLOPostProcess()
