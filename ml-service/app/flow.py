@@ -24,3 +24,13 @@ class Task(BaseTask):
         self.preprocessed_shape: Optional[Tuple[int, int]] = None
         self.shifts: Optional[Tuple[int, int]] = None
         self.pred: Optional[Tuple[bytes, str]] = None
+
+
+class ImageLoaderHandler(BaseTaskHandler):
+    def __init__(self):
+        self._model = default_producer.get_data_loader()
+
+    def handle(self, *tasks: Task):
+        for task in tasks:
+            task.image, task.padded_shape = self._model.process(task.image)
+
