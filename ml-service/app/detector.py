@@ -5,7 +5,7 @@ import numpy as np
 import onnxruntime
 
 from utils.augmentations import letterbox
-from utils.general import non_max_suppression
+from utils.general import non_max_suppression, scale_coords
 
 
 class Yolo5Detector:
@@ -47,9 +47,7 @@ class YOLOPreProcess:
 
 
 class YOLOV5Model:
-    def __init__(
-        self, model_weights_path: str, device: str
-    ):
+    def __init__(self, model_weights_path: str, device: str):
         self.model_weights_path = model_weights_path
         self.device = torch.device(device)
         (
@@ -82,3 +80,23 @@ class YOLOV5Model:
             [self.out_name_1, self.out_name_2], {self.input_name: data_batch}
         )
         return y[0], y[1]
+
+
+class YOLOPostProcess:
+    def __init__(self):
+        pass
+
+    def process(
+        self,
+        data: Tuple[np.ndarray, np.ndarray],
+        original_shape: Tuple[int, int],
+        pred_shape: Tuple[int, int],
+    ) -> torch.Tensor:
+        pred, _ = data
+        pred = torch.from_numpy(pred).unsqueeze(0)
+        pred = non_max_suppression(pred, 0.4, 0.45, None, False, max_det=64)
+
+        pred = pred[0]
+        pred[:, :4] = scale_coords(pred_shape, pred[:, :4], original_shape).round()
+
+        return pred
