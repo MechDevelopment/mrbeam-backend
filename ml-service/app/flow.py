@@ -9,7 +9,7 @@ from aqueduct import (
     FlowStep,
 )
 
-from detector import default_producer
+from detector import default_producer, YOLOV5Model
 
 
 class Task(BaseTask):
@@ -44,9 +44,9 @@ class YOLOPreProcessHandler(BaseTaskHandler):
             task.image, task.preprocessed_shape = self._model.process(task.image)
 
 
-class YOLOModelHandler(BaseTaskHandler):
+class ModelHandler(BaseTaskHandler):
     def __init__(self):
-        self._model = None
+        self._model: Optional[YOLOV5Model] = None
 
     def on_start(self):
         self._model = default_producer.get_oneformer_model()
@@ -58,3 +58,12 @@ class YOLOModelHandler(BaseTaskHandler):
         for pred, task in zip(preds, tasks):
             task.pred = pred
             task.image = None
+
+
+class YOLOPostProcessHandler(BaseTaskHandler):
+    def __init__(self):
+        self._model = default_producer.get_post_proc()
+
+    def handle(self, *tasks: Task):
+        for task in tasks:
+            task.pred = self._model.process(task.pred, task.orig_shape, task.preprocessed_shape, task.padded_shape, task.shifts)
