@@ -34,3 +34,11 @@ class ImageLoaderHandler(BaseTaskHandler):
         for task in tasks:
             task.image, task.padded_shape = self._model.process(task.image)
 
+
+class YOLOPreProcessHandler(BaseTaskHandler):
+    def __init__(self):
+        self._model = default_producer.get_pre_proc()
+
+    def handle(self, *tasks: Task):
+        for task in tasks:
+            task.image, task.preprocessed_shape = self._model.process(task.image)
