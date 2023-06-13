@@ -2,6 +2,7 @@ import abc
 from typing import Tuple, List
 import torch
 import numpy as np
+import onnxruntime
 
 from utils.augmentations import letterbox
 from utils.general import non_max_suppression
@@ -24,7 +25,9 @@ class Yolo5Detector:
 
 
 class YOLOPreProcess:
-    def __init__(self, image_size: Tuple[int, int], stride: int = 32, auto: bool = False):
+    def __init__(
+        self, image_size: Tuple[int, int], stride: int = 32, auto: bool = False
+    ):
         self._image_size = image_size
         self._stride = stride
         self._auto = auto
@@ -41,3 +44,41 @@ class YOLOPreProcess:
         im = im.unsqueeze(0)
 
         return im.numpy(), im.shape
+
+
+class YOLOV5Model:
+    def __init__(
+        self, model_weights_path: str, device: str
+    ):
+        self.model_weights_path = model_weights_path
+        self.device = torch.device(device)
+        (
+            self.model,
+            self.input_name,
+            self.out_name_1,
+            self.out_name_2,
+        ) = self._get_model()
+
+    def _get_model(self):
+        providers = ["CPUExecutionProvider"]
+        model = onnxruntime.InferenceSession(
+            self.model_weights_path, providers=providers
+        )
+        return (
+            model,
+            model.get_inputs()[0].name,
+            model.get_outputs()[0].name,
+            model.get_outputs()[-1].name,
+        )
+
+    def process_list(
+        self, data: List[np.ndarray]
+    ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+        preds, protos = self._process_batch(np.concatenate(data, axis=0))
+        return [(preds[i], protos[i]) for i in range(preds.shape[0])]
+
+    def _process_batch(self, data_batch: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        y = self.model.run(
+            [self.out_name_1, self.out_name_2], {self.input_name: data_batch}
+        )
+        return y[0], y[1]
