@@ -42,3 +42,19 @@ class YOLOPreProcessHandler(BaseTaskHandler):
     def handle(self, *tasks: Task):
         for task in tasks:
             task.image, task.preprocessed_shape = self._model.process(task.image)
+
+
+class YOLOModelHandler(BaseTaskHandler):
+    def __init__(self):
+        self._model = None
+
+    def on_start(self):
+        self._model = default_producer.get_oneformer_model()
+
+    def handle(self, *tasks: Task):
+        preds = self._model.process_list(
+            data=[task.image for task in tasks]
+        )
+        for pred, task in zip(preds, tasks):
+            task.pred = pred
+            task.image = None
