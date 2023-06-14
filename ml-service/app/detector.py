@@ -1,8 +1,11 @@
 import abc
+import io
 import dataclasses
 from typing import Tuple, List
 import torch
 import numpy as np
+import cv2
+from PIL import Image
 import onnxruntime
 
 from utils.augmentations import letterbox
@@ -98,15 +101,29 @@ class YOLOPostProcess:
         pred = non_max_suppression(pred, 0.4, 0.45, None, False, max_det=64)
 
         pred = pred[0]
-        pred[:, :4] = scale_coords(pred_shape, pred[:, :4], original_shape).round()
-
+        pred[:, :4] = scale_coords(pred_shape[2:], pred[:, :4], original_shape).round()
+        print(pred)
         return pred
 
+
+class DataLoader:
+    def __init__(self):
+        self.convert_to_rgb: bool = True
+
+    def process(self, im_bytes: bytes) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
+        img = Image.open(io.BytesIO(im_bytes))
+        img = np.array(img)
+
+        if self.convert_to_rgb:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+        return img, img.shape[:2]
+    
 
 @dataclasses.dataclass
 class ModelInfo:
     name: str
-    config_path: str
     weights_path: str
     device: str
     image_size: int
@@ -127,3 +144,6 @@ class ModelProducer:
 
     def get_post_proc(self) -> YOLOPostProcess:
         return YOLOPostProcess()
+    
+    def get_data_loader(self) -> DataLoader:
+        return DataLoader()
