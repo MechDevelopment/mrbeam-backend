@@ -30,9 +30,6 @@ class PredictView(web.View):
         try:
             await self.flow.process(task, timeout_sec=60)
         except RuntimeError as e:
-            if str(e).startswith('CUDA out of memory'):
-                logging.error('Internal error: {}'.format(e))
-                os.system('kill -9 %d' % os.getpid())
             logging.error('Internal error: {}'.format(e))
             return web.Response(body={'status': str(e)}, status=500)
         
@@ -48,7 +45,6 @@ def prepare_app() -> web.Application:
 
 
 if __name__ == '__main__':
-    # mp.set_start_method('spawn')
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
