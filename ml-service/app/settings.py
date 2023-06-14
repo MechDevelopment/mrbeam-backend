@@ -7,10 +7,13 @@ class Settings(BaseSettings):
 
     app_dir: str = os.path.abspath(os.path.dirname(__file__))
     project_root: str = os.path.abspath(os.path.join(app_dir, os.pardir))
-    weights_path: str = os.path.join(project_root, "weights/yolo5l_640.pt")
     port: int = 8011
     environment: str = "development"
-    
+
+    model_weights: str = os.path.join(project_root, "weights/yolo5l_640.pt")
+    model_conf: float = 0.4
+    model_image_size: int = 640
+
     class Config:
         env_file = ".env"
 
