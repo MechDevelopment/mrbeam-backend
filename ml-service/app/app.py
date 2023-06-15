@@ -23,7 +23,7 @@ class PredictView(web.View):
 
     async def post(self):
         post = await self.request.post()
-        image = post.get("image")
+        image = post.get("file")
         im = image.file.read()
         task = Task(image=im)
 
@@ -37,7 +37,7 @@ class PredictView(web.View):
 
 def prepare_app() -> web.Application:
     app = web.Application(client_max_size=0)
-    app.router.add_post('/inference', PredictView)
+    app.router.add_post('/predict', PredictView)
 
     AppIntegrator(app).add_flow(get_flow())
 
