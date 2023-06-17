@@ -1,8 +1,8 @@
-from aiohttp import web
 import asyncio
 import logging
-import os
-import time
+from aiohttp import web
+
+from settings import settings, Settings
 
 
 from aqueduct.integrations.aiohttp import (
@@ -35,7 +35,8 @@ class PredictView(web.View):
         
         return web.json_response([{"xmin": 1}, {"xmin": 2}])
 
-def prepare_app() -> web.Application:
+
+def prepare_app(settings: Settings) -> web.Application:
     app = web.Application(client_max_size=0)
     app.router.add_post('/predict', PredictView)
 
@@ -49,4 +50,4 @@ if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
 
     loop = asyncio.get_event_loop()
-    web.run_app(prepare_app(), loop=loop, port=8011)
+    web.run_app(prepare_app(settings), loop=loop, port=settings.port)
