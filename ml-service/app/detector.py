@@ -88,7 +88,7 @@ class YOLOV5Model:
 
 class YOLOPostProcess:
     def __init__(self):
-        pass
+        self.keys = ['xmin', 'ymin', 'xmax', 'ymax', 'conf', 'class']
 
     def process(
         self,
@@ -102,7 +102,9 @@ class YOLOPostProcess:
 
         pred = pred[0]
         pred[:, :4] = scale_coords(pred_shape[2:], pred[:, :4], original_shape).round()
-        print(pred)
+        pred[:, :4] = pred[:, :4]/torch.tensor(original_shape).repeat(2)
+        pred = [{k: v[i] for i, k in enumerate(self.keys)} for v in pred.tolist()]
+
         return pred
 
 
