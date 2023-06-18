@@ -33,7 +33,7 @@ class PredictView(web.View):
             logging.error('Internal error: {}'.format(e))
             return web.Response(body={'status': str(e)}, status=500)
         
-        return web.json_response([{"xmin": 1}, {"xmin": 2}])
+        return web.json_response(task.pred)
 
 
 def prepare_app(settings: Settings) -> web.Application:
