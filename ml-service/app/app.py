@@ -40,7 +40,7 @@ def prepare_app(settings: Settings) -> web.Application:
     app = web.Application(client_max_size=0)
     app.router.add_post('/predict', PredictView)
 
-    AppIntegrator(app).add_flow(get_flow())
+    AppIntegrator(app).add_flow(get_flow(settings))
 
     return app
 
