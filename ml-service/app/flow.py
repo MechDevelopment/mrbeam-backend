@@ -10,7 +10,7 @@ from aqueduct import (
 )
 
 from pydantic import BaseSettings
-from detector import YOLOV5Model, DataLoader, YOLOPreProcess, YOLOPostProcess
+from detector import YOLOV5Model, ImageLoader, YOLOPreProcess, YOLOPostProcess
 
 
 class Task(BaseTask):
@@ -26,7 +26,7 @@ class Task(BaseTask):
 
 class ImageLoaderHandler(BaseTaskHandler):
     def __init__(self):
-        self._model = DataLoader()
+        self._model = ImageLoader()
 
     def handle(self, *tasks: Task):
         for task in tasks:

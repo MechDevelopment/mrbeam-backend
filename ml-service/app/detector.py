@@ -106,7 +106,7 @@ class YOLOPostProcess:
         return pred
 
 
-class DataLoader:
+class ImageLoader:
     def __init__(self):
         self.convert_to_rgb: bool = True
 
