@@ -102,7 +102,7 @@ class YOLOPostProcess:
 
         pred = pred[0]
         pred[:, :4] = scale_coords(pred_shape[2:], pred[:, :4], original_shape).round()
-        pred[:, :4] = pred[:, :4]/torch.tensor(original_shape).repeat(2)
+        pred[:, :4] = pred[:, :4]/torch.tensor(original_shape[::-1]).repeat(2)
         pred = [{k: v[i] for i, k in enumerate(self.keys)} for v in pred.tolist()]
 
         return pred
