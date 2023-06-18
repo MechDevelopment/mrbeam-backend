@@ -110,40 +110,13 @@ class DataLoader:
     def __init__(self):
         self.convert_to_rgb: bool = True
 
-    def process(self, im_bytes: bytes) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
+    def process(
+        self, im_bytes: bytes
+    ) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
         img = Image.open(io.BytesIO(im_bytes))
         img = np.array(img)
 
         if self.convert_to_rgb:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-
         return img, img.shape[:2]
-    
-
-@dataclasses.dataclass
-class ModelInfo:
-    name: str
-    weights_path: str
-    device: str
-    image_size: int
-
-
-class ModelProducer:
-    def __init__(self, model_info: ModelInfo):
-        self._model_info = model_info
-
-    def get_pre_proc(self) -> YOLOPreProcess:
-        return YOLOPreProcess(self._model_info.image_size)
-
-    def get_model(self) -> YOLOV5Model:
-        return YOLOV5Model(
-            self._model_info.weights_path,
-            self._model_info.device
-        )
-
-    def get_post_proc(self) -> YOLOPostProcess:
-        return YOLOPostProcess()
-    
-    def get_data_loader(self) -> DataLoader:
-        return DataLoader()

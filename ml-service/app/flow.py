@@ -9,24 +9,12 @@ from aqueduct import (
     FlowStep,
 )
 
-from detector import ModelProducer, YOLOV5Model, ModelInfo
-
-
-PipelineModelsInfo = ModelInfo(
-    'YOLOV5',
-    "/Users/vpvp/Documents/beams/weights/best_s_june.onnx",
-    'cpu',
-    640
-)
-
-default_producer = ModelProducer(PipelineModelsInfo)
+from pydantic import BaseSettings
+from detector import YOLOV5Model, DataLoader, YOLOPreProcess, YOLOPostProcess
 
 
 class Task(BaseTask):
-    def __init__(
-            self,
-            image: bytes
-    ):
+    def __init__(self, image: bytes):
         super().__init__()
         self.image = image
         self.orig_shape: Optional[Tuple[int, int]] = None
@@ -38,7 +26,7 @@ class Task(BaseTask):
 
 class ImageLoaderHandler(BaseTaskHandler):
     def __init__(self):
-        self._model = default_producer.get_data_loader()
+        self._model = DataLoader()
 
     def handle(self, *tasks: Task):
         for task in tasks:
@@ -46,24 +34,26 @@ class ImageLoaderHandler(BaseTaskHandler):
 
 
 class YOLOPreProcessHandler(BaseTaskHandler):
-    def __init__(self):
-        self._model = default_producer.get_pre_proc()
+    def __init__(self, image_size):
+        self.image_size = image_size
+        self._model = YOLOPreProcess(self.image_size)
 
     def handle(self, *tasks: Task):
         for task in tasks:
             task.image, task.preprocessed_shape = self._model.process(task.image)
 
+
 class ModelHandler(BaseTaskHandler):
-    def __init__(self):
-        self._model: Optional[YOLOV5Model] = None
+    def __init__(self, weights_path, device: str = "cpu"):
+        self.weights_path = weights_path
+        self.device = device
+        self._model = None
 
     def on_start(self):
-        self._model = default_producer.get_model()
+        self._model = YOLOV5Model(self.weights_path, self.device)
 
     def handle(self, *tasks: Task):
-        preds = self._model.process_list(
-            data=[task.image for task in tasks]
-        )
+        preds = self._model.process_list(data=[task.image for task in tasks])
         for pred, task in zip(preds, tasks):
             task.pred = pred
             task.image = None
@@ -71,18 +61,20 @@ class ModelHandler(BaseTaskHandler):
 
 class YOLOPostProcessHandler(BaseTaskHandler):
     def __init__(self):
-        self._model = default_producer.get_post_proc()
+        self._model = YOLOPostProcess()
 
     def handle(self, *tasks: Task):
         for task in tasks:
-            task.pred = self._model.process(task.pred, task.orig_shape, task.preprocessed_shape)
+            task.pred = self._model.process(
+                task.pred, task.orig_shape, task.preprocessed_shape
+            )
 
 
-def get_flow() -> Flow:
+def get_flow(settings: BaseSettings) -> Flow:
     return Flow(
         FlowStep(ImageLoaderHandler(), nprocs=1),
-        FlowStep(YOLOPreProcessHandler(), nprocs=1),
-        FlowStep(ModelHandler(), batch_size=1, nprocs=1),
+        FlowStep(YOLOPreProcessHandler(settings.image_size), nprocs=1),
+        FlowStep(ModelHandler(settings.model_weights), batch_size=1, nprocs=1),
         FlowStep(YOLOPostProcessHandler(), nprocs=1),
         metrics_enabled=False,
         # mp_start_method='spawn',
