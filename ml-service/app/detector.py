@@ -1,12 +1,12 @@
-import abc
 import io
-import dataclasses
 from typing import Tuple, List
+import dataclasses
 import torch
 import numpy as np
 import cv2
 from PIL import Image
 import onnxruntime
+from onnxruntime.capi.onnxruntime_inference_collection import InferenceSession
 
 from utils.augmentations import letterbox
 from utils.general import non_max_suppression, scale_coords
@@ -36,7 +36,7 @@ class YOLOPreProcess:
         self._stride = stride
         self._auto = auto
 
-    def process(self, image: np.ndarray) -> Tuple[np.ndarray, List[int]]:
+    def process(self, image: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int]]:
         im = letterbox(image, self._image_size, stride=self._stride, auto=self._auto)[0]
         im = im.transpose((2, 0, 1))
         im = np.ascontiguousarray(im)
@@ -61,7 +61,7 @@ class YOLOV5Model:
             self.out_name_2,
         ) = self._get_model()
 
-    def _get_model(self):
+    def _get_model(self) -> Tuple[InferenceSession, str, str, str]:
         providers = ["CPUExecutionProvider"]
         model = onnxruntime.InferenceSession(
             self.model_weights_path, providers=providers
@@ -88,21 +88,21 @@ class YOLOV5Model:
 
 class YOLOPostProcess:
     def __init__(self):
-        self.keys = ['xmin', 'ymin', 'xmax', 'ymax', 'conf', 'class']
+        self.keys = ["xmin", "ymin", "xmax", "ymax", "conf", "class"]
 
     def process(
         self,
         data: Tuple[np.ndarray, np.ndarray],
         original_shape: Tuple[int, int],
         pred_shape: Tuple[int, int],
-    ) -> torch.Tensor:
+    ) -> List[dict]:
         pred, _ = data
         pred = torch.from_numpy(pred).unsqueeze(0)
         pred = non_max_suppression(pred, 0.4, 0.45, None, False, max_det=64)
 
         pred = pred[0]
         pred[:, :4] = scale_coords(pred_shape[2:], pred[:, :4], original_shape).round()
-        pred[:, :4] = pred[:, :4]/torch.tensor(original_shape[::-1]).repeat(2)
+        pred[:, :4] = pred[:, :4] / torch.tensor(original_shape[::-1]).repeat(2)
         pred = [{k: v[i] for i, k in enumerate(self.keys)} for v in pred.tolist()]
 
         return pred
@@ -114,7 +114,7 @@ class ImageLoader:
 
     def process(
         self, im_bytes: bytes
-    ) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
+    ) -> Tuple[np.ndarray, Tuple[int, int]]:
         img = Image.open(io.BytesIO(im_bytes))
         img = np.array(img)
 
