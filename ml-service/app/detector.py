@@ -20,7 +20,7 @@ class YOLOPreProcess:
         self._stride = stride
         self._auto = auto
 
-    def process(self, image: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int]]:
+    def process(self, image: np.ndarray) -> np.ndarray:
         im = letterbox(image, self._image_size, stride=self._stride, auto=self._auto)[0]
         im = im.transpose((2, 0, 1))
         im = np.ascontiguousarray(im)
@@ -31,7 +31,7 @@ class YOLOPreProcess:
 
         im = im.unsqueeze(0)
 
-        return im.numpy(), im.shape
+        return im.numpy()
 
 
 class YOLOV5Model:

@@ -40,8 +40,8 @@ class YOLOPreProcessHandler(BaseTaskHandler):
 
     def handle(self, *tasks: Task):
         for task in tasks:
-            task.image, task.preprocessed_shape = self._model.process(task.image)
-
+            task.image = self._model.process(task.image)
+            task.preprocessed_shape = task.image.shape
 
 class ModelHandler(BaseTaskHandler):
     def __init__(self, weights_path, device: str = "cpu"):
