@@ -10,7 +10,7 @@ from aqueduct import (
 )
 
 from pydantic import BaseSettings
-from detector import YOLOV5Model, ImageLoader, YOLOPreProcess, YOLOPostProcess
+from app.detector import YOLOV5Model, ImageLoader, YOLOPreProcess, YOLOPostProcess
 
 
 class Task(BaseTask):

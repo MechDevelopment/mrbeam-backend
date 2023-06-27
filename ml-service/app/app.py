@@ -2,14 +2,14 @@ import asyncio
 import logging
 from aiohttp import web
 
-from settings import settings, Settings
+from app.settings import settings, Settings
 
 
 from aqueduct.integrations.aiohttp import (
     FLOW_NAME,
     AppIntegrator,
 )
-from flow import (
+from app.flow import (
     Flow,
     Task,
     get_flow,

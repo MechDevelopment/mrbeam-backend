@@ -8,8 +8,8 @@ from PIL import Image
 import onnxruntime
 from onnxruntime.capi.onnxruntime_inference_collection import InferenceSession
 
-from utils.augmentations import letterbox
-from utils.general import non_max_suppression, scale_coords
+from app.utils.augmentations import letterbox
+from app.utils.general import non_max_suppression, scale_coords
 
 
 class Yolo5Detector:
