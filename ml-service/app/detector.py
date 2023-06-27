@@ -42,7 +42,6 @@ class YOLOV5Model:
             self.model,
             self.input_name,
             self.out_name_1,
-            self.out_name_2,
         ) = self._get_model()
 
     def _get_model(self) -> Tuple[InferenceSession, str, str, str]:
@@ -53,21 +52,20 @@ class YOLOV5Model:
         return (
             model,
             model.get_inputs()[0].name,
-            model.get_outputs()[0].name,
-            model.get_outputs()[-1].name,
+            model.get_outputs()[0].name
         )
 
     def process_list(
         self, data: List[np.ndarray]
     ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
-        preds, protos = self._process_batch(np.concatenate(data, axis=0))
-        return [(preds[i], protos[i]) for i in range(preds.shape[0])]
+        preds = self._process_batch(np.concatenate(data, axis=0))
+        return [preds[i] for i in range(preds.shape[0])]
 
     def _process_batch(self, data_batch: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         y = self.model.run(
-            [self.out_name_1, self.out_name_2], {self.input_name: data_batch}
+            [self.out_name_1], {self.input_name: data_batch}
         )
-        return y[0], y[1]
+        return y[0]
 
 
 class YOLOPostProcess:
@@ -80,7 +78,7 @@ class YOLOPostProcess:
         original_shape: Tuple[int, int],
         pred_shape: Tuple[int, int],
     ) -> List[dict]:
-        pred, _ = data
+        pred = data
         pred = torch.from_numpy(pred).unsqueeze(0)
         pred = non_max_suppression(pred, 0.4, 0.45, None, False, max_det=64)
 
