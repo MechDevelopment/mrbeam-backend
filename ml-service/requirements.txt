@@ -12,7 +12,6 @@ pandas
 Pillow
 psutil
 pydantic
-pytest
 PyYAML
 requests
 requests_toolbelt
