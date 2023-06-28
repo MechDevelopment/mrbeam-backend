@@ -29,4 +29,5 @@ jobs:
         run: |
           cd ml-service
           pip install pytest
+          pytest
   
