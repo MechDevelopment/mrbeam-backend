@@ -1,8 +1,9 @@
-FROM python:3.9-slim-buster
+FROM python:3.11-slim-buster
 
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update
+RUN apt-get install -y gcc libffi-dev libgl1 libglib2.0-0
 
 RUN mkdir -p /app
 
@@ -10,11 +11,10 @@ WORKDIR /app
 COPY ./requirements.txt /app
 
 RUN pip install --upgrade pip
-RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 RUN pip install -r requirements.txt
 
 COPY ./app /app
 
-COPY ./weights /weights
+WORKDIR /
 
-EXPOSE 8000
+EXPOSE 8011
