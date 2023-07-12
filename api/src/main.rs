@@ -2,17 +2,17 @@ use actix_multipart::form::MultipartForm;
 use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder};
 use dotenvy::dotenv;
 use image::EncodableLayout;
+use sqlx::pool::PoolOptions;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::{ConnectOptions, PgPool, Pool, Postgres};
 use std::env;
 use std::str::FromStr;
+use std::{net::TcpListener, time::Duration};
 
 use tracing::subscriber::set_global_default;
 use tracing_actix_web::TracingLogger;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_subscriber::{
-    layer::SubscriberExt, EnvFilter, Registry,
-};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 use api::models::{PredictionId, PredictionUpload};
 use api::services::{ImageStorage, MLService};
@@ -40,7 +40,6 @@ async fn predict(
     ml_client: web::Data<MLService>,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
-
     let bytes = form.file.data.as_bytes().to_vec();
 
     let hash = sha256::digest_bytes(&bytes);
@@ -144,10 +143,17 @@ async fn main() -> std::io::Result<()> {
     )));
 
     let options = PgConnectOptions::new().disable_statement_logging().clone();
-    
-    let db_pool = PgPool::connect_with(options)
+
+    let db_pool = PoolOptions::default()
+        .acquire_timeout(Duration::from_secs(5))
+        .connect_with(options)
         .await
         .expect("Failed to connect to the database.");
+
+    while let Err(e) = sqlx::migrate!("./migrations").run(&db_pool).await {
+        tracing::error!("Failed to run migrations: {}", e);
+        tokio::time::sleep(Duration::from_secs(30)).await;
+    }
 
     HttpServer::new(move || {
         App::new()
@@ -164,7 +170,11 @@ async fn main() -> std::io::Result<()> {
                     .route("/correct/{id}", web::post().to(correct)),
             )
     })
-    .bind("127.0.0.1:8001")?
+    .bind(format!(
+        "{}:{}",
+        env::var("API_HOST").unwrap().to_string(),
+        env::var("API_PORT").unwrap().to_string(),
+    ))?
     .run()
     .await
 }
