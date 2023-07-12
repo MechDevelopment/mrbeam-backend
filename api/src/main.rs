@@ -11,7 +11,7 @@ use tracing::subscriber::set_global_default;
 use tracing_actix_web::TracingLogger;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{
-    filter::Targets, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
+    layer::SubscriberExt, EnvFilter, Registry,
 };
 
 use api::models::{PredictionId, PredictionUpload};
@@ -40,18 +40,18 @@ async fn predict(
     ml_client: web::Data<MLService>,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
+
     let bytes = form.file.data.as_bytes().to_vec();
 
     let hash = sha256::digest_bytes(&bytes);
 
-    // tracing::info!("Predicting for image {}!", hash);
-    let beams = ml_client.predict(bytes.clone()).await.unwrap();
+    let beams = ml_client.predict(bytes.clone()).await?;
     let row: (uuid::Uuid,) =
         sqlx::query_as("INSERT INTO predictions (prediction) VALUES ($1) RETURNING id")
             .bind(sqlx::types::Json(&beams))
             .fetch_one(&data.db)
             .await
-            .expect("Unable to create.");
+            .expect("Unable to add new prediction.");
 
     let filename = format!(
         "{}.{}",
@@ -109,16 +109,16 @@ async fn correct(
 async fn main() -> std::io::Result<()> {
     dotenv().expect(".env file not found");
 
-    let _guard = sentry::init((
-        env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set."),
-        sentry::ClientOptions {
-            release: sentry::release_name!(),
-            traces_sample_rate: 1.0,
-            enable_profiling: true,
-            profiles_sample_rate: 1.0,
-            ..Default::default()
-        },
-    ));
+    // let _guard = sentry::init((
+    //     env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set."),
+    //     sentry::ClientOptions {
+    //         release: sentry::release_name!(),
+    //         traces_sample_rate: 1.0,
+    //         enable_profiling: true,
+    //         profiles_sample_rate: 1.0,
+    //         ..Default::default()
+    //     },
+    // ));
 
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let skipped_fields = vec!["line", "file", "target"];
@@ -127,7 +127,7 @@ async fn main() -> std::io::Result<()> {
         .expect("One of the specified fields cannot be skipped");
     let subscriber = Registry::default()
         .with(env_filter)
-        .with(sentry_tracing::layer())
+        // .with(sentry_tracing::layer())
         .with(JsonStorageLayer)
         .with(formatting_layer);
     set_global_default(subscriber).expect("Failed to set subscriber.");
@@ -144,7 +144,7 @@ async fn main() -> std::io::Result<()> {
     )));
 
     let options = PgConnectOptions::new().disable_statement_logging().clone();
-
+    
     let db_pool = PgPool::connect_with(options)
         .await
         .expect("Failed to connect to the database.");
