@@ -35,8 +35,7 @@ impl MLService {
             .post(&predict_url)
             .multipart(form)
             .send()
-            .await
-            .unwrap();
+            .await?;
 
         let beams: Vec<Beam> = res.json().await.unwrap();
         Ok(beams)
@@ -78,7 +77,7 @@ impl ImageStorage {
         &self,
         image: Vec<u8>,
         filename: String,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Option<String> {
         let res = self.s3_bucket.head_object(filename.to_owned()).await;
 
         match res {
@@ -87,11 +86,11 @@ impl ImageStorage {
                     .put_object(filename.to_owned(), &image)
                     .await
                     .unwrap();
-                return Ok(filename);
+                return Some(filename);
             }
-            Err(_) => todo!(),
+            Err(_) => return None,
             Ok(_) => {
-                return Ok(filename);
+                return Some(filename);
             }
         };
         //     actix_web::rt::time::sleep(std::time::Duration::from_secs(2)).await;
