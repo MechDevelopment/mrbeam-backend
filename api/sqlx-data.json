@@ -1,0 +1,44 @@
+{
+  "db": "PostgreSQL",
+  "b7f43bb829bc5409b3e808f2ff2976939d17f20fb1eaf37993e40c9118c096a4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT id FROM predictions WHERE id = $1"
+  },
+  "ca06fef84e1f37050bc5610aa7036f0b69de0c97bc83e93dc31b3fc8ecba46e4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE predictions SET correction = $1 WHERE id = $2 RETURNING id"
+  }
+}
