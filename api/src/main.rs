@@ -66,7 +66,7 @@ async fn predict(
     // TODO (vpvpvpvp): Add gracefull shutdown!
     tokio::task::spawn(async move {
         let image_storage = image_storage.clone();
-        let res = image_storage.upload_image(bytes, _filename).await.unwrap();
+        let res = image_storage.upload_image(bytes, _filename).await;
     });
 
     Ok(HttpResponse::Ok().json(PredictionUpload {

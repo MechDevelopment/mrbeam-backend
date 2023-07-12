@@ -67,7 +67,7 @@ impl ImageStorage {
                 expiration: None,
             },
         )
-        .unwrap()
+        .expect("Failed to connect to the image service.")
         .with_path_style();
 
         Self { s3_bucket }
