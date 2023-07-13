@@ -43,15 +43,6 @@ async fn predict(
     let bytes = form.file.data.as_bytes().to_vec();
 
     let hash = sha256::digest_bytes(&bytes);
-
-    let beams = ml_client.predict(bytes.clone()).await?;
-    let row: (uuid::Uuid,) =
-        sqlx::query_as("INSERT INTO predictions (prediction) VALUES ($1) RETURNING id")
-            .bind(sqlx::types::Json(&beams))
-            .fetch_one(&data.db)
-            .await
-            .expect("Unable to add new prediction.");
-
     let filename = format!(
         "{}.{}",
         hash,
@@ -61,9 +52,19 @@ async fn predict(
             .unwrap()
             .to_owned()
     );
-    let _filename = filename.clone();
+    
+    let beams = ml_client.predict(bytes.clone()).await?;
+    let row: (uuid::Uuid,) =
+    sqlx::query_as("INSERT INTO predictions (prediction, image) VALUES ($1, $2) RETURNING id")
+    .bind(sqlx::types::Json(&beams))
+    .bind(&filename)
+    .fetch_one(&data.db)
+    .await
+    .expect("Unable to add new prediction.");
+
 
     // TODO (vpvpvpvp): Add gracefull shutdown!
+    let _filename = filename.clone();
     tokio::task::spawn(async move {
         let image_storage = image_storage.clone();
         let res = image_storage.upload_image(bytes, _filename).await;

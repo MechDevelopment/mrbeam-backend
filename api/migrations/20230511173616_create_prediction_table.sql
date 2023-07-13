@@ -6,5 +6,6 @@ CREATE TABLE predictions(
     WITH
         TIME ZONE DEFAULT NOW(),
     prediction JSONB,
-    correction JSONB
+    correction JSONB,
+    image TEXT
 );
