@@ -4,10 +4,10 @@ use dotenvy::dotenv;
 use image::EncodableLayout;
 use sqlx::pool::PoolOptions;
 use sqlx::postgres::PgConnectOptions;
-use sqlx::{ConnectOptions, PgPool, Pool, Postgres};
+use sqlx::{ConnectOptions, Pool, Postgres};
 use std::env;
 use std::str::FromStr;
-use std::{net::TcpListener, time::Duration};
+use std::time::Duration;
 
 use tracing::subscriber::set_global_default;
 use tracing_actix_web::TracingLogger;
@@ -52,16 +52,15 @@ async fn predict(
             .unwrap()
             .to_owned()
     );
-    
+
     let beams = ml_client.predict(bytes.clone()).await?;
     let row: (uuid::Uuid,) =
-    sqlx::query_as("INSERT INTO predictions (prediction, image) VALUES ($1, $2) RETURNING id")
-    .bind(sqlx::types::Json(&beams))
-    .bind(&filename)
-    .fetch_one(&data.db)
-    .await
-    .expect("Unable to add new prediction.");
-
+        sqlx::query_as("INSERT INTO predictions (prediction, image) VALUES ($1, $2) RETURNING id")
+            .bind(sqlx::types::Json(&beams))
+            .bind(&filename)
+            .fetch_one(&data.db)
+            .await
+            .expect("Unable to add new prediction.");
 
     // TODO (vpvpvpvp): Add gracefull shutdown!
     let _filename = filename.clone();
@@ -146,7 +145,7 @@ async fn main() -> std::io::Result<()> {
     let options = PgConnectOptions::new().disable_statement_logging().clone();
 
     let db_pool = PoolOptions::default()
-        .acquire_timeout(Duration::from_secs(5))
+        .acquire_timeout(Duration::from_secs(20))
         .connect_with(options)
         .await
         .expect("Failed to connect to the database.");
