@@ -39,7 +39,7 @@ services:
           - minio
       container_name: mc
       env_file:
-          - .env
+        - ./api/.env.docker
       entrypoint: >
           /bin/sh -c "
           until (/usr/bin/mc config host add minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}) do echo '...waiting...' && sleep 1; done;
