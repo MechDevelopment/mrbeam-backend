@@ -134,8 +134,8 @@ async fn main() -> std::io::Result<()> {
     let image_storage = web::Data::new(ImageStorage::new(
         env::var("MINIO_BUCKET").unwrap().to_string(),
         env::var("MINIO_URL").unwrap().to_string(),
-        env::var("MINIO_ACCESS_KEY").unwrap().to_string(),
-        env::var("MINIO_SECRET_KEY").unwrap().to_string(),
+        env::var("MINIO_ROOT_USER").unwrap().to_string(),
+        env::var("MINIO_ROOT_PASSWORD").unwrap().to_string(),
     ));
 
     let ml_client = web::Data::new(MLService::new(String::from(
