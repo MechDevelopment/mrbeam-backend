@@ -62,3 +62,4 @@ torchvision==0.15.2
 typing_extensions==4.7.1
 urllib3==2.0.3
 yarl==1.9.2
+python-dotenv

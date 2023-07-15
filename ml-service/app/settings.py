@@ -1,5 +1,7 @@
 import os
 from pydantic import BaseSettings
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -15,7 +17,6 @@ class Settings(BaseSettings):
     image_size: int = 640
 
     class Config:
-        env_file = ".env"
-
+        env_prefix = 'ML_'
 
 settings = Settings()
