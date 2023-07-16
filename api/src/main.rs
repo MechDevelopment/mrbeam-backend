@@ -5,26 +5,20 @@ use image::EncodableLayout;
 use sqlx::pool::PoolOptions;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::{ConnectOptions, Pool, Postgres};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+use tracing_actix_web::TracingLogger;
+
 use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 
-use tracing::subscriber::set_global_default;
-use tracing_actix_web::TracingLogger;
-use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-
-use api::models::{PredictionId, PredictionUpload};
+use api::models::{Beam, PredictionId, PredictionUpload, UploadForm};
 use api::services::{ImageStorage, MLService};
+use api::telemetry;
 
 pub struct AppState {
     db: Pool<Postgres>,
-}
-
-#[derive(Debug, MultipartForm)]
-struct UploadForm {
-    file: actix_multipart::form::bytes::Bytes,
-    save: Option<actix_multipart::form::text::Text<String>>,
 }
 
 async fn health() -> impl Responder {
@@ -32,8 +26,26 @@ async fn health() -> impl Responder {
 }
 
 #[tracing::instrument(
-    name = "Adding a new prediction",
+    name = "New prediction",
     skip(form, image_storage, ml_client, data)
+)]
+#[utoipa::path(
+    post,
+    path="/api/v1/predict",
+    tag="predict",
+    responses(
+        (status = 200, description = "List current todo items", body = [PredictionUpload])
+    ),
+    request_body(
+        content = UploadForm, 
+        description = "Returns the list with recognized beam elements.
+            \n\nThe coordinates of each box have the following format:
+            \n\n(`xmin`, `ymin`) - upper left point
+            \n\n(`xmax`, `ymax`) - bottom right point
+            \n\nThese coordinates are normalized from 0 to 1.
+            \n\nTo convert the coordinates into absolute values relative to the shape of the image, 
+            multiply `xmin`, `xmax` by the image length and `ymin`, `ymax` by the height.", 
+        content_type = "multipart/form-data"),
 )]
 async fn predict(
     MultipartForm(form): MultipartForm<UploadForm>,
@@ -125,28 +137,7 @@ async fn correct(
 async fn main() -> std::io::Result<()> {
     dotenv().expect(".env file not found");
 
-    // let _guard = sentry::init((
-    //     env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set."),
-    //     sentry::ClientOptions {
-    //         release: sentry::release_name!(),
-    //         traces_sample_rate: 1.0,
-    //         enable_profiling: true,
-    //         profiles_sample_rate: 1.0,
-    //         ..Default::default()
-    //     },
-    // ));
-
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    let skipped_fields = vec!["line", "file", "target"];
-    let formatting_layer = BunyanFormattingLayer::new("mrbeam-api".into(), std::io::stdout)
-        .skip_fields(skipped_fields.into_iter())
-        .expect("One of the specified fields cannot be skipped");
-    let subscriber = Registry::default()
-        .with(env_filter)
-        // .with(sentry_tracing::layer())
-        .with(JsonStorageLayer)
-        .with(formatting_layer);
-    set_global_default(subscriber).expect("Failed to set subscriber.");
+    telemetry::init_telemetry();
 
     let image_storage = web::Data::new(ImageStorage::new(
         env::var("MINIO_BUCKET").unwrap().to_string(),
@@ -172,6 +163,21 @@ async fn main() -> std::io::Result<()> {
         tokio::time::sleep(Duration::from_secs(30)).await;
     }
 
+    #[derive(OpenApi)]
+    #[openapi(
+        paths(
+            predict
+        ),
+        components(
+            schemas(Beam, UploadForm, PredictionUpload)
+        ),
+        tags(
+            (name = "predict")
+        )
+    )]
+    struct ApiDoc;
+    let openapi = ApiDoc::openapi();
+
     HttpServer::new(move || {
         App::new()
             .app_data(ml_client.clone())
@@ -180,6 +186,9 @@ async fn main() -> std::io::Result<()> {
                 db: db_pool.clone(),
             }))
             .wrap(TracingLogger::default())
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+            )
             .service(
                 web::scope("/api/v1")
                     .route("/health", web::get().to(health))
