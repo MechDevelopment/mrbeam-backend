@@ -35,7 +35,7 @@ impl MLService {
             .multipart(form)
             .send()
             .await?;
-        
+
         let beams: Vec<Beam> = res.json().await?;
         Ok(beams)
     }
@@ -72,11 +72,7 @@ impl ImageStorage {
         Self { s3_bucket }
     }
 
-    pub async fn upload_image(
-        &self,
-        image: Vec<u8>,
-        filename: String,
-    ) -> Option<String> {
+    pub async fn upload_image(&self, image: Vec<u8>, filename: String) -> Option<String> {
         let res = self.s3_bucket.head_object(filename.to_owned()).await;
 
         match res {

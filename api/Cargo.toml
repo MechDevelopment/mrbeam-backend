@@ -34,5 +34,7 @@ tracing = { version = "0.1.37", features = ["log"] }
 tracing-actix-web = "0.7.5"
 tracing-bunyan-formatter = "0.3.7"
 tracing-subscriber = { version = "0.3.17", features = ["serde", "serde_json", "json", "env-filter"] }
+utoipa = { version = "3.4.0", features = ["actix_extras"] }
+utoipa-swagger-ui = { version = "3.1.4", features = ["actix-web"] }
 uuid = { version = "1.3.3", features = ["serde"] }
 
