@@ -34,7 +34,7 @@ async fn health() -> impl Responder {
     path="/api/v1/predict",
     tag="predict",
     responses(
-        (status = 200, description = "List current todo items", body = [PredictionUpload])
+        (status = 200, description = "List with recognized beam elements.", body = [PredictionUpload])
     ),
     request_body(
         content = UploadForm, 
