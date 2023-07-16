@@ -24,7 +24,7 @@ pub struct AppState {
 #[derive(Debug, MultipartForm)]
 struct UploadForm {
     file: actix_multipart::form::bytes::Bytes,
-    save: Option<actix_multipart::form::text::Text<String>>
+    save: Option<actix_multipart::form::text::Text<String>>,
 }
 
 async fn health() -> impl Responder {
@@ -41,8 +41,14 @@ async fn predict(
     ml_client: web::Data<MLService>,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
-    if !form.file.content_type.unwrap().to_string().starts_with("image/") {
-        return Ok(HttpResponse::BadRequest().body("The file is not an image."))
+    if !form
+        .file
+        .content_type
+        .unwrap()
+        .to_string()
+        .starts_with("image/")
+    {
+        return Ok(HttpResponse::BadRequest().body("The file is not an image."));
     }
 
     let bytes = form.file.data.as_bytes().to_vec();
@@ -58,7 +64,13 @@ async fn predict(
             .to_owned()
     );
 
-    let beams = ml_client.predict(bytes.clone()).await?;
+    let beams = ml_client.predict(bytes.clone()).await;
+    if beams.is_err() {
+        tracing::error!("{:?}", beams.err().unwrap());
+        return Ok(HttpResponse::InternalServerError()
+            .body("Error during image processing. Try again later."));
+    }
+    let beams = beams.unwrap();
     let row: (uuid::Uuid,) =
         sqlx::query_as("INSERT INTO predictions (prediction, image) VALUES ($1, $2) RETURNING id")
             .bind(sqlx::types::Json(&beams))
