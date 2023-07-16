@@ -20,10 +20,11 @@ use api::services::{ImageStorage, MLService};
 pub struct AppState {
     db: Pool<Postgres>,
 }
+
 #[derive(Debug, MultipartForm)]
 struct UploadForm {
     file: actix_multipart::form::bytes::Bytes,
-    save: Option<actix_multipart::form::text::Text<String>>,
+    save: Option<actix_multipart::form::text::Text<String>>
 }
 
 async fn health() -> impl Responder {
@@ -40,6 +41,10 @@ async fn predict(
     ml_client: web::Data<MLService>,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
+    if !form.file.content_type.unwrap().to_string().starts_with("image/") {
+        return Ok(HttpResponse::BadRequest().body("The file is not an image."))
+    }
+
     let bytes = form.file.data.as_bytes().to_vec();
 
     let hash = sha256::digest_bytes(&bytes);

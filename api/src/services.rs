@@ -25,8 +25,7 @@ impl MLService {
 
         let beam_image = reqwest::multipart::Part::bytes(image)
             .file_name("beam.png")
-            .mime_str("image/png")
-            .unwrap();
+            .mime_str("image/png")?;
 
         let form = reqwest::multipart::Form::new().part("file", beam_image);
 
@@ -36,8 +35,8 @@ impl MLService {
             .multipart(form)
             .send()
             .await?;
-
-        let beams: Vec<Beam> = res.json().await.unwrap();
+        
+        let beams: Vec<Beam> = res.json().await?;
         Ok(beams)
     }
 }
@@ -93,6 +92,5 @@ impl ImageStorage {
                 return Some(filename);
             }
         };
-        //     actix_web::rt::time::sleep(std::time::Duration::from_secs(2)).await;
     }
 }
