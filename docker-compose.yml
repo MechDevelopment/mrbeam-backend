@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${PGPASSWORD}
       POSTGRES_DB: ${PGDATABASE}
     env_file:
-      - ./api/.env.docker
+      - .env
     ports:
       - "${PGPORT}:5432"
       
@@ -29,6 +29,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    env_file:
+      - .env
     ports:
       - 9000:9000
       - 9001:9001
@@ -39,7 +41,7 @@ services:
           - minio
       container_name: mc
       env_file:
-        - ./api/.env.docker
+        - .env
       entrypoint: >
           /bin/sh -c "
           until (/usr/bin/mc config host add minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}) do echo '...waiting...' && sleep 1; done;
@@ -55,6 +57,8 @@ services:
       context: ./ml-service
       dockerfile: ./Dockerfile
     command: bash -c "python -m app.app"
+    env_file:
+      - .env
     ports:
       - "8011:8011"
     volumes:
@@ -71,6 +75,8 @@ services:
       - database
       - minio
       - mlservice
+    env_file:
+      - .env
     ports:
       - "8001:8001"
 
