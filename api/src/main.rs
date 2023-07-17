@@ -8,6 +8,7 @@ use sqlx::{ConnectOptions, Pool, Postgres};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use tracing_actix_web::TracingLogger;
+use uuid::Uuid;
 
 use std::env;
 use std::str::FromStr;
@@ -21,6 +22,14 @@ pub struct AppState {
     db: Pool<Postgres>,
 }
 
+#[utoipa::path(
+    get,
+    path="/api/v1/health",
+    tag="default",
+    responses(
+        (status = 200, description = "Ok.")
+    ),
+)]
 async fn health() -> impl Responder {
     HttpResponse::Ok()
 }
@@ -105,12 +114,23 @@ async fn predict(
 }
 
 #[tracing::instrument(name = "Correct prediction", skip(body, data))]
+#[utoipa::path(
+    post,
+    path="/api/v1/correct",
+    tag="predict",
+    responses(
+        (status = 200, description = "Prediction is corrected.")
+    )
+)]
 async fn correct(
-    id: web::Path<String>,
     body: web::Json<PredictionUpload>,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
-    let id = uuid::Uuid::from_str(&id.into_inner()).unwrap();
+    let id = match uuid::Uuid::from_str(&body.uuid) {
+        Ok(id) => id,
+        Err(_) => return Ok(HttpResponse::NotFound()),
+    };
+
     let query_result =
         sqlx::query_as!(PredictionId, "SELECT id FROM predictions WHERE id = $1", id)
             .fetch_one(&data.db)
@@ -165,8 +185,11 @@ async fn main() -> std::io::Result<()> {
 
     #[derive(OpenApi)]
     #[openapi(
+        info(title="mrbeam API"),
         paths(
-            predict
+            health,
+            predict,
+            correct
         ),
         components(
             schemas(Beam, UploadForm, PredictionUpload)
@@ -187,13 +210,13 @@ async fn main() -> std::io::Result<()> {
             }))
             .wrap(TracingLogger::default())
             .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+                SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )
             .service(
                 web::scope("/api/v1")
                     .route("/health", web::get().to(health))
                     .route("/predict", web::post().to(predict))
-                    .route("/correct/{id}", web::post().to(correct)),
+                    .route("/correct", web::post().to(correct)),
             )
     })
     .bind(format!(
