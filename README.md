@@ -28,4 +28,18 @@ Environment variable `$ML_MODEL_WEIGHTS` allows you to specify which specific we
 - [ ] Support of other models than `YOLOv5.`
 
 ### Model trainer
-*work in progress*
+#### Dataset
+You can find a dataset for recognizing different beam elements in the image on the roboflow page: [beams dataset](https://universe.roboflow.com/victor-penzurov-7b8xd/mrbeam). It contains the following beam elements:
+
+- 0 - The whole beam
+- 1 - Distribution load
+- 2 - Fixed support
+- 3 - Force
+- 4 - Momentum
+- 5 - Pin support
+- 6 - Roller
+
+Over time the dataset will be extended with new samples, of course, but even now it can be used to get some reasonable results. Download the dataset and place it in the `data` folder.
+
+#### Training
+*Work in progress*
