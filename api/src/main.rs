@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use api::models::{Beam, PredictionId, PredictionUpload, UploadForm};
 use api::services::{ImageStorage, MLService};
-use api::telemetry;
+use api::{telemetry, repository};
 
 pub struct AppState {
     db: Pool<Postgres>,
@@ -92,13 +92,8 @@ async fn predict(
             .body("Error during image processing. Try again later."));
     }
     let beams = beams.unwrap();
-    let row: (uuid::Uuid,) =
-        sqlx::query_as("INSERT INTO predictions (prediction, image) VALUES ($1, $2) RETURNING id")
-            .bind(sqlx::types::Json(&beams))
-            .bind(&filename)
-            .fetch_one(&data.db)
-            .await
-            .expect("Unable to add new prediction.");
+
+    let uuid = repository::prediction::add_prediction(&data.db, &beams, &filename).await.unwrap();
 
     // TODO (vpvpvpvp): Add gracefull shutdown!
     let _filename = filename.clone();
@@ -109,7 +104,7 @@ async fn predict(
 
     Ok(HttpResponse::Ok().json(PredictionUpload {
         data: beams,
-        uuid: row.0.to_string(),
+        uuid
     }))
 }
 
