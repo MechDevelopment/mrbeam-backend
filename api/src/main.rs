@@ -85,13 +85,14 @@ async fn predict(
             .to_owned()
     );
 
-    let beams = ml_client.predict(bytes.clone()).await;
-    if beams.is_err() {
-        tracing::error!("{:?}", beams.err().unwrap());
-        return Ok(HttpResponse::InternalServerError()
-            .body("Error during image processing. Try again later."));
-    }
-    let beams = beams.unwrap();
+    let beams: Vec<Beam> =  match ml_client.predict(bytes.clone()).await {
+        Ok(beams) => beams,
+        Err(e) => {
+            tracing::error!("{:?}", e);
+            return Ok(HttpResponse::InternalServerError()
+                .body("Error during image processing. Try again later."));
+        }
+    };
 
     let uuid = repository::prediction::add_prediction(&data.db, &beams, &filename).await.unwrap();
 
