@@ -4,7 +4,6 @@ use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 pub fn init_telemetry() {
-
     // let _guard = sentry::init((
     //     env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set."),
     //     sentry::ClientOptions {
@@ -15,9 +14,18 @@ pub fn init_telemetry() {
     //         ..Default::default()
     //     },
     // ));
-    
+
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    let skipped_fields = vec!["line", "file", "target"];
+    let skipped_fields = vec![
+        "line",
+        "file",
+        "target",
+        "http.scheme",
+        "http.flavor",
+        "otel.name",
+        "otel.kind",
+        "http.target",
+    ];
     let formatting_layer = BunyanFormattingLayer::new("mrbeam-api".into(), std::io::stdout)
         .skip_fields(skipped_fields.into_iter())
         .expect("One of the specified fields cannot be skipped");
