@@ -153,6 +153,17 @@ async fn correct(
 async fn main() -> std::io::Result<()> {
     dotenv().expect(".env file not found");
 
+    let _guard = sentry::init((
+        std::env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set."),
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            traces_sample_rate: 1.0,
+            enable_profiling: true,
+            profiles_sample_rate: 1.0,
+            ..Default::default()
+        },
+    ));
+
     telemetry::init_telemetry();
 
     let image_storage = web::Data::new(ImageStorage::new(
@@ -168,7 +179,7 @@ async fn main() -> std::io::Result<()> {
 
     let options = PgConnectOptions::new().disable_statement_logging().clone();
 
-    let db_pool = PoolOptions::default()
+    let db_pool: Pool<Postgres> = PoolOptions::default()
         .acquire_timeout(Duration::from_secs(20))
         .connect_with(options)
         .await

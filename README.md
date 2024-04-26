@@ -1,5 +1,9 @@
-# mrbeam.app backend
-Backend services for [mrbeam.app](https://mrbeam.app).
+# mrbeam.app AI backend
+Recognition of beam elements in an image using AI for [mrbeam.app](https://mrbeam.app).
+
+An examples of recognition:
+
+![](/static/1.jpg)  |  ![](/static/2.png)
 
 ## Components of the architecture
 ### Main API
@@ -16,6 +20,11 @@ Stack:
 - PostgreSQL
 - Minio
 - [Sentry](https://sentry.io/)
+
+#### TODO: 
+- [ ] Add user service.
+- [ ] Add login service.
+
 ### Model inference API
 Source: [`ml-service/`](ml-service/)
 

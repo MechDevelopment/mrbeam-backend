@@ -24,11 +24,11 @@ services:
     depends_on:
       - database
     ports:
-      - "8001:8001"
+      - "8000:8001"
       
   minio:
     image: minio/minio:latest
-    container_name: minio
+    container_name: miminio
     restart: unless-stopped
     command: server --console-address ":9001" /data/
     environment:
@@ -44,6 +44,23 @@ services:
     ports:
       - 9000:9000
       - 9001:9001
+
+  mc:
+      image: minio/mc:latest
+      depends_on:
+          - minio
+      container_name: mc
+      env_file:
+          - .env
+      entrypoint: >
+          /bin/sh -c "
+          until (/usr/bin/mc config host add minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}) do echo '...waiting...' && sleep 1; done;
+         
+          /usr/bin/mc alias set minio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+          /usr/bin/mc mb minio/mlflow;
+          /usr/bin/mc mb minio/mrbeam;
+          exit 0;
+          "
 
 volumes:
   minio-storage:
